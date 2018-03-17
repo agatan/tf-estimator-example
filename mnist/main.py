@@ -26,7 +26,7 @@ def model_fn(features, labels, mode, params):
             class_ids=prediction_classes,
             probabilities=tf.nn.softmax(logits, axis=-1),
             logits=logits)
-        return predictions
+        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
     loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
     accuracy = tf.metrics.accuracy(labels, prediction_classes, name='acc_op')
