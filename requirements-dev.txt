@@ -2,6 +2,6 @@ jupyter
 ipython
 icecream
 ipdb
-tensorboard==1.6
+tensorboard==1.8
 autopep8
 mypy
