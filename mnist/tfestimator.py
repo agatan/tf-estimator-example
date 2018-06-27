@@ -65,10 +65,13 @@ def model_fn(features, labels, mode, params):
 
 def serving_input_receiver_fn():
     receiver_tensors = {
-        INPUT_FEATURE: tf.placeholder(tf.float32, [None, None, None, 1]),
+        INPUT_FEATURE: tf.placeholder(tf.string, [None]),
     }
+    image = tf.map_fn(lambda x: tf.image.decode_image(x, channels=1), receiver_tensors[INPUT_FEATURE], dtype=tf.uint8)
+    image.set_shape([None, None, None, 1])
+    image = tf.cast(image, dtype=tf.int32)
     features = {
-        INPUT_FEATURE: tf.image.resize_images(receiver_tensors[INPUT_FEATURE], [28, 28]),
+        INPUT_FEATURE: tf.image.resize_images(image, [28, 28]),
     }
     return tf.estimator.export.ServingInputReceiver(receiver_tensors=receiver_tensors, features=features)
 
