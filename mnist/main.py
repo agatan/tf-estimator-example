@@ -26,7 +26,7 @@ def model_fn(features, labels, mode, params):
             class_ids=prediction_classes,
             probabilities=tf.nn.softmax(logits, axis=-1),
             logits=logits)
-        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
+        return tf.estimator.EstimatorSpec(mode, predictions=predictions, export_outputs={tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: tf.estimator.export.PredictOutput(predictions)})
 
     loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
     accuracy = tf.metrics.accuracy(labels, prediction_classes, name='acc_op')
@@ -78,13 +78,23 @@ def main(argv):
     def train_input_fn():
         return input_fn(dict(image=mnist_data.train.images), mnist_data.train.labels, args.batch_size, repeat=True)
 
-    def test_input_fn():
+    def eval_input_fn():
         return input_fn(dict(image=mnist_data.test.images), mnist_data.test.labels, args.batch_size)
 
-    experiment = tf.contrib.learn.Experiment(estimator, train_input_fn, test_input_fn,
-                                             train_steps=args.steps,
-                                             min_eval_frequency=1)
-    experiment.train_and_evaluate()
+    train_spec = tf.estimator.TrainSpec(train_input_fn, max_steps=10)
+    eval_spec = tf.estimator.EvalSpec(eval_input_fn)
+
+    tf.estimator.train_and_evaluate(estimator, train_spec=train_spec, eval_spec=eval_spec)
+
+    def serving_input_receiver_fn():
+        inputs = {
+            'image': tf.placeholder(tf.float32, [None, 28, 28, 1]),
+        }
+        return tf.estimator.export.ServingInputReceiver(inputs, inputs)
+
+    estimator.export_savedmodel('./save', serving_input_receiver_fn=tf.estimator.export.build_raw_serving_input_receiver_fn(
+        {'image': tf.placeholder(tf.float32, [None, 28 * 28, 1])}
+        ))
 
 
 if __name__ == '__main__':
